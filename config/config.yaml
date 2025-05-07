@@ -1,0 +1,18 @@
+# Rurallure API configuration
+
+# project:
+#   path: "./" # Server path must be absolute
+
+api:
+  host: "0.0.0.0"
+  production_port: 7552
+  develop_port: 7551
+
+database:
+  host: "193.146.210.248"
+  port: 5432
+  user: "anxo_rurallure"
+  db_name: "rurallure"
+  password_var: "PGSQL_PASSWORD" # Environment variable name
+
+images_dir: "/home/anxo/projects/rurallure/POIs/images"

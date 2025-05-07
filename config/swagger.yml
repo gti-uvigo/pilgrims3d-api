@@ -1,0 +1,301 @@
+swagger: "2.0"
+info:
+  title: Rurallure API
+  description: API for Rurallure application
+  version: "1.0"
+schemes:
+  - http
+tags:
+  - name: POI
+    description: Puntos de interés (POIs)
+  - name: Status
+    description: Comprobación de estado de la API
+  - name: Tools
+    description: Herramientas de la API
+paths:
+  # Status
+  # -----------------------------
+  /:
+    get:
+      tags:
+        - Status
+      summary: Comprobación de estado de la API
+      description: Este es un endpoint de comprobación de estado. Si la API está en funcionamiento, devolverá un mensaje de estado "ok".
+      responses:
+        200:
+          description: OK
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                description: Status code (debe ser "ok")
+  
+  # Puntos de interés cercanos a un punto
+  # -----------------------------
+  /pois/around:
+    post:
+      tags:
+        - POI
+      summary: Búsqueda de POIs cercanos.
+      description: Este endpoint devuelve una lista de puntos de interés (POIs) alrededor de una ubicación dada.
+      parameters:
+        - name: body
+          in: body
+          required: true
+          type: object
+          properties:
+            latitude:
+              type: number
+              description: Latitud de la ubicación
+              example: 42.947739322207944
+            longitude:
+              type: number
+              description: Longitud de la ubicación
+              example: -8.586023009308265
+            radius:
+              type: number
+              description: Radio en metros para buscar POIs alrededor de la ubicación dada.
+              example: 2000
+            n_max:
+              type: integer
+              description: Número máximo de POIs a devolver.
+              example: null
+      responses:
+        200:
+          description: Lista de POIs encontrados alrededor de la ubicación dada.
+          schema:
+            type: object
+            properties:
+              status: 
+                type: string
+                description: Status code (debe ser "ok")
+                example: ok
+              pois:
+                type: array
+                items:
+                  $ref: '#/definitions/POI'
+              radius:
+                type: number
+                description: Radio en metros utilizado para la búsqueda de POIs.
+                example: 2000
+              n_max:
+                type: integer
+                description: Número máximo de POIs devueltos.
+                example: null
+        400:
+          description: Error en la petición.
+          schema:
+            type: object
+            properties:
+              status: 
+                type: string
+                description: Status code (debe ser "error")
+                example: error
+              message:
+                type: string
+                description: Mensaje de error.
+                example: "Mensaje con información sobre el error."
+  
+  # Puntos de interés cercanos a cualquier punto
+  # -----------------------------
+  /pois/near-any:
+     post:
+      tags:
+        - POI
+      summary: Búsqueda de POIs en áreas más amplias utilizando dos puntos de referencia.
+      description: Este endpoint devuelve una lista de puntos de interés (POIs) en la contorna de dos puntos de referencia dados.
+      parameters:
+        - name: body
+          in: body
+          required: true
+          type: object
+          properties:
+            locations:
+              type: array
+              items:
+                type: object
+                properties:
+                  latitude:
+                    type: number
+                    description: Latitud de la ubicación
+                    example: 42.947739322207944
+                  longitude:
+                    type: number
+                    description: Longitud de la ubicación
+                    example: -8.586023009308265
+            radius:
+              type: number
+              description: Radio en metros para buscar POIs alrededor de la ubicación dada.
+              example: 20000
+            n_max:
+              type: integer
+              description: Número máximo de POIs a devolver.
+              example: null
+      responses:
+        200:
+          description: Lista de POIs encontrados alrededor de las ubicaciones dadas.
+          schema:
+            type: object
+            properties:
+              status: 
+                type: string
+                description: Status code (debe ser "ok")
+                example: ok
+              pois:
+                type: array
+                items:
+                  $ref: '#/definitions/POI'
+              radius:
+                type: number
+                description: Radio utilizado para la búsqueda de POIs.
+                example: 20000
+              n_max:
+                type: integer
+                description: Número máximo de POIs devueltos.
+                example: null
+        400:
+          description: Error en la petición.
+          schema:
+            type: object
+            properties:
+              status: 
+                type: string
+                description: Status code (debe ser "error")
+                example: error
+              message:
+                type: string
+                description: Mensaje de error.
+                example: "Mensaje con información sobre el error."
+
+  # Detalle de un POI
+  # -----------------------------
+  /poi/description:
+    post:
+      tags:
+        - POI
+      summary: Detalle de un POI.
+      description: Este endpoint devuelve título, descripción e imágen de punto de interés (POI) dado su ID.
+      parameters:
+        - name: body
+          in: body
+          required: true
+          type: object
+          properties:
+            id:
+              type: string
+              description: ID del POI
+              example: uuid
+            language:
+              type: string
+              description: Idioma de la descripción del POI (iso639-1).
+              example: es
+      responses:
+        200:
+          description: Información detallada del POI.
+          schema:
+            type: object
+            properties:
+              status: 
+                type: string
+                description: Status code (debe ser "ok")
+                example: ok
+              title:
+                type: string
+                description: Título del POI.
+                example: "Título del POI"
+              description:
+                type: string
+                description: Descripción del POI.
+                example: "Descripción del POI"
+              image:
+                type: string
+                description: nombre del fichero de la imagen del POI.
+                example: "image.jpg"
+              location:
+                type: object
+                description: Localización del POI.
+                properties:
+                  latitude:
+                    type: number
+                    description: Latitud del POI
+                    example: 42.88056210793229
+                  longitude:
+                    type: number
+                    description: Longitud del POI
+                    example: -8.54452415833635
+              language:
+                type: string
+                description: Idioma de la descripción del POI (iso639-1).
+                example: es
+        400:
+          description: Error en la petición.
+          schema:
+            type: object
+            properties:
+              status: 
+                type: string
+                description: Status code (debe ser "error")
+                example: error
+              message:
+                type: string
+                description: Mensaje de error.
+                example: "Mensaje con información sobre el error."
+
+# Enviar una imágen
+# ----------------------------
+  /image/{filename}:
+    get:
+      tags:
+        - Tools
+      summary: Envío de imágenes.
+      description: Este endpoint sirve para enviar al cliente una imágen de las que se encuentran en el servidor.
+      parameters:
+        - name: filename
+          in: path
+          required: true
+          type: string
+          description: Nombre del fichero de la imagen.
+          example: "image.jpg"
+      responses:
+        200:
+          description: Imagen encontrada.
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+
+        404:
+          description: Imagen no encontrada.
+          schema:
+            type: object
+            properties:
+              status: 
+                type: string
+                description: Status code (debe ser "error")
+                example: error
+              message:
+                type: string
+                description: Mensaje de error.
+                example: "Mensaje con información sobre el error."
+
+# ----------------------------------
+# Definitions
+# -----------------------------
+definitions:
+  POI:
+    type: object
+    properties:
+      id:
+        type: string
+        description: ID del POI
+        example: uuid
+      latitude:
+        type: number
+        description: Latitud del POI
+        example: 42.88056210793229
+      longitude:
+        type: number
+        description: Longitud del POI
+        example: -8.54452415833635
