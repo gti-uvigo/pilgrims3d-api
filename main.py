@@ -2,6 +2,8 @@ import os
 import argparse
 from flask import Flask, jsonify, request, send_file
 from flasgger import Swagger
+import requests
+import json
 
 from src.utils import get_logger, load_config
 from src.database import PostgreSQLManager
@@ -104,6 +106,101 @@ def function_get_image(image_filename):
     
     # Return the image file
     return send_file(image_path, mimetype="image/gif"), 200
+
+@app.route("/routes", methods=["POST"])
+def function_get_all_routes():
+    """
+    Endpoint to get all available routes in the API.
+    """
+    body = request.get_json()
+    
+    if "routes_id" not in body:
+        routes_id = None
+    else:
+        routes_id = body["routes_id"]
+
+    result = PostgreSQLManager.get_routes(db_manager, routes_id)
+
+    if result["status"] != "ok":
+        return jsonify({"status": "error", "message": "Routes not working"}), 400
+    return jsonify({"status": "ok", "data": result["data"]}), 200
+
+
+
+@app.route("/route_types", methods=["GET"])
+def function_get_route_types():
+    """
+    Endpoint to get all available route types in the API.
+    """
+    result = PostgreSQLManager.get_route_types(db_manager)
+    if result["status"] != "ok":
+        return jsonify({"status": "error", "message": "Route types not working"}), 400
+    return jsonify({"status": "ok", "data": result["data"]}), 200
+
+@app.route("/map/routes", methods=["GET"])
+def function_get_map_routes():
+    """
+    Endpoint to get all available routes in the API.
+    """
+
+    result = PostgreSQLManager.get_routes(db_manager, None)
+
+    routes = []
+    for route in result["data"]:
+
+        #realizo una petiicon post para obtener la ruta 
+        lat_origin = float(route["start_gps_latitude"])
+        lon_origin = float(route["start_gps_longitude"])
+        lat_destination = float(route["end_gps_latitude"])
+        lon_destination = float(route["end_gps_longitude"])
+        url = 'http://localhost:8989/route'
+
+        data={
+            "points": [
+                [lon_origin, lat_origin],
+                [lon_destination, lat_destination]
+            ],
+            "profile": "car",
+            "ch.disable": True,
+            "points_encoded": False,
+            "custom_model": {
+                "speed": [
+                    {
+                        "if": "true",
+                        "limit_to": "100"
+                    }
+                    ],
+                    "priority": [
+                    {
+                        "if": "road_class == MOTORWAY",
+                        "multiply_by": "0"
+                    }
+                    ],
+                    "distance_influence": 100
+                }
+                } 
+        
+
+        response = requests.post(url, json=data)
+        if "paths" not in response.text:
+            print(f"Error: 'paths' not found in response for route {route['id']}")
+            print("Ruta fuera de españa")
+            continue
+        points = json.loads(response.text)["paths"][0]["points"]
+        routes.append({
+            "id": route["id"],
+            "name": route["name"],
+            "start_gps_latitude": route["start_gps_latitude"],
+            "start_gps_longitude": route["start_gps_longitude"],
+            "end_gps_latitude": route["end_gps_latitude"],
+            "end_gps_longitude": route["end_gps_longitude"],
+            "points": points
+        })
+
+    if result["status"] != "ok":
+        return jsonify({"status": "error", "message": "Routes not working"}), 400
+    return jsonify({"status": "ok", "data": routes}), 200
+
 
 # =========================================
 # MAIN FUNCTION

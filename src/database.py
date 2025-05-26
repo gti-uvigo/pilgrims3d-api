@@ -131,6 +131,50 @@ class PostgreSQLManager:
         except psycopg.Error as e:
             return {"status": "error", "message": f"Error al obtener los puntos de interés: {e}"}
 
+    def get_routes(self,routes_id:list):
+        """
+        Get all available routes in the API.
+        """
+        try:
+            routes = []
+            if not routes_id: routes_id = ['50da0d69-3647-4897-9dcc-2ed9820e1648', '946f21c8-4b83-4808-bf49-7e7e3e803d12']
+            routes_id = ', '.join(f"'{id_}'" for id_ in (', '.join(map(str, routes_id))).split(', '))  # Add quotes around each id 
+            with self.connection.cursor() as cursor:
+                query = f"SELECT * FROM trip t JOIN trip_pilgrim tp ON t.id = tp.id WHERE t.partnership_id IN ({routes_id});"
+                cursor.execute(query)
+                results = cursor.fetchall()
+                for row in results:
+                    route = {
+                        "id": str(row[0]),
+                        "name": str(row[12]),
+                        "start_gps_latitude": float(row[15]),
+                        "start_gps_longitude": float(row[16]),
+                        "end_gps_latitude": float(row[17]),
+                        "end_gps_longitude": float(row[18]),
+                    }
+                    routes.append(route)
+            return {"status": "ok", "data": routes}
+        except psycopg.Error as e:
+            return {"status": "error", "message": f"Error al obtener las rutas: {e}"}
+        
+    def get_route_types(self):
+        """
+        Get all available route types in the API.
+        """
+        try:
+            route_types = []
+            with self.connection.cursor() as cursor:
+                cursor.execute("SELECT id, description  FROM partnership;")
+                results = cursor.fetchall()
+                for row in results:
+                    route_type = {
+                        "id": str(row[0]),
+                        "name": str(row[1]),
+                    }
+                    route_types.append(route_type)
+            return {"status": "ok", "data": route_types}
+        except psycopg.Error as e:
+            return {"status": "error", "message": f"Error al obtener los tipos de ruta: {e}"}
 
     # =====================================
     # Helper methods
