@@ -1,6 +1,7 @@
 import db.dto as dto
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+from utils import get_route
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
@@ -57,13 +58,43 @@ def function_get_route_locations(route_id):
     
     :param route_id: ID of the route to get locations for.
     """
-    result = dto.get_route_locations(route_id)
+    all_route = dto.get_route_locations(route_id)
     
-    if not result:
+    if not all_route:
         return jsonify({"status": "error", "message": "Route locations not found"}), 404
     
-    return jsonify({"status": "ok", "data": result}), 200
+    
+    return jsonify({"status": "ok", "data": all_route}), 200
 
+@app.route('/route_locations/<route_id>', methods=['POST'])
+def function_get_route_locations_start(route_id):
+    """
+    Endpoint to get all locations of a specific route.
+    
+    :param route_id: ID of the route to get locations for.
+    """
+
+    body = request.get_json()
+    if not body or "start_points" not in body:
+        return jsonify({"status": "error", "message": "Invalid request body"}), 400
+    
+    route_start = body.get("start_points")
+    all_route = dto.get_route_locations(route_id)
+
+    if not all_route:
+        return jsonify({"status": "error", "message": "Route locations not found"}), 404
+
+    route_to_locations = get_route(route_start, [all_route[0]["locations"]["all_points"][0][1], all_route[0]["locations"]["all_points"][0][0]], profile="foot")
+
+    if not route_to_locations:
+        return jsonify({"status": "error", "message": "Route not found"}), 404
+    
+    result = {
+        "all_route": all_route,
+        "route_to_start": route_to_locations
+    }
+    
+    return jsonify({"status": "ok", "data": result}), 200
 
 
 @app.route('/poi/<poi_id>', methods=['GET'])
@@ -128,5 +159,5 @@ def function_download_image(image_id):
 
 
 
-# if __name__ == '__main__':
-#     app.run(debug=True, host='127.0.0.1', port=5000)
+if __name__ == '__main__':
+    app.run(debug=True, host='127.0.0.1', port=5000)
