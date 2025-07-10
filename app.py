@@ -340,6 +340,41 @@ def function_download_image(image_id):
     
     return response
 
+@app.route("/pois_types/<language_id>", methods=["GET"])
+def function_get_pois_types(language_id):  
+    """
+    Endpoint to get all available POI types.
+    ---
+    tags:
+      - POI Types
+    parameters:
+      - in: path
+        name: language_id
+        type: string
+        required: true
+        description: ID del idioma
+    responses:
+      200:
+        description: Lista de tipos de POIs disponibles
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+            data:
+              type: array
+              items:
+                type: object
+      404:
+        description: Tipos de POIs no encontrados
+    """
+    result = dto.get_pois_types(language_id)
+    
+    if not result:
+        return jsonify({"status": "error", "message": "POI types not found"}), 404
+    
+    return jsonify({"status": "ok", "data": result}), 200
+
 swagger_config = {
     "swagger": "2.0",
     "info": {
@@ -407,5 +442,6 @@ def function_get_pois_by_route(route_id):
 
 swagger = flasgger.Swagger(app, template=swagger_config)
 
-# if __name__ == '__main__':
-#     app.run(debug=True, host='127.0.0.1', port=5000)
+
+if __name__ == '__main__':
+    app.run(debug=True, host='127.0.0.1', port=5000)

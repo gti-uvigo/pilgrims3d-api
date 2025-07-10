@@ -103,7 +103,20 @@ def get_route_types():
                 del route_type[key]
     return route_types
 
-
+def get_pois_types(language_id: str = "6d68e409-c46e-4d4a-8560-f15256e9cbb3"):
+    """
+    Obtiene todos los tipos de puntos de interés (POIs) disponibles.
+    
+    :return: Lista de tipos de POIs.
+    """
+    types = []
+    pois_types = get_method("pois_categories", {}, many=True)
+    for pois_type in pois_types:
+        for language in pois_type["languages"]:
+            if language["language_id"] == language_id:
+                text = language["name"]
+                types.append({"id": pois_type["id"], "text": text})
+    return types
 
 def get_image_by_id(image_id: str):
     """
