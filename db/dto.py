@@ -129,3 +129,18 @@ def get_image_by_id(image_id: str):
     return image
 
 
+
+def get_all_pois():
+    """
+    Obtiene todos los puntos de interés (POIs) disponibles.
+    
+    :return: Lista de POIs.
+    """
+    pois = get_method("pois", {}, many=True)
+    for poi in pois:
+        for key in ["_id", "titles", "descriptions", "address", "website", "booking", "minutes_duration", "rating", "planner_priority", "image_id"]:
+            if key in poi:
+                del poi[key]
+    return pois
+
+

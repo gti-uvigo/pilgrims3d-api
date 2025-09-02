@@ -440,6 +440,44 @@ def function_get_pois_by_route(route_id):
 
 
 
+@app.route('/get_all_pois', methods=['GET'])
+def function_get_all_pois():
+    """
+    Endpoint to get all points of interest (POIs).
+    ---
+    tags:
+      - POI
+    parameters:
+      - in: query
+        name: language_id
+        type: string
+        required: false
+        description: ID del idioma (opcional)
+    responses:
+      200:
+        description: Lista de puntos de interés encontrados
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+            data:
+              type: array
+              items:
+                type: object
+      404:
+        description: Puntos de interés no encontrados
+    """
+    result = dto.get_all_pois()
+    
+    if not result:
+        return jsonify({"status": "error", "message": "POIs not found"}), 404
+    
+    return jsonify({"status": "ok", "data": result}), 200
+
+
+
+
 
 swagger = flasgger.Swagger(app, template=swagger_config)
 
