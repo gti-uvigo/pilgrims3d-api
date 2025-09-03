@@ -4,9 +4,30 @@ from flask_cors import CORS
 from utils import get_route
 import flasgger
 
+
+from flask_jwt_extended import (
+    JWTManager, create_access_token, jwt_required, get_jwt
+)
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+import datetime
+import os
+from dotenv import load_dotenv
+
+load_dotenv(".env")
+
+
+
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
+app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET")
+jwt = JWTManager(app)
+limiter = Limiter(
+    key_func=get_remote_address,
+    app=app,
+    default_limits=[]
+)
 
 @app.route('/routes', methods=['POST'])
 def function_get_all_routes():
@@ -109,6 +130,8 @@ def function_get_route_stages(route_id, language_id):
                 stage["points_of_interest"][idx]["title"] = poi_data.get("title")
                 stage["points_of_interest"][idx]["image_id"] = poi_data.get("image_id")
                 stage["points_of_interest"][idx]["types"] = poi_data.get("types")
+                stage["points_of_interest"][idx]["latitude"] = poi_data.get("latitude")
+                stage["points_of_interest"][idx]["longitude"] = poi_data.get("longitude")
 
     return jsonify({"status": "ok", "data": result}), 200
 
@@ -190,16 +213,19 @@ def function_get_route_locations_start(route_id):
         description: Localizaciones de la ruta no encontradas
     """
     body = request.get_json()
-    if not body or "start_points" not in body:
+    if not body or "start_points" not in body or "end_points" not in body:
         return jsonify({"status": "error", "message": "Invalid request body"}), 400
     
     route_start = body.get("start_points")
     all_route = dto.get_route_locations(route_id)
 
+    route_end = body.get("end_points")
+
+
     if not all_route:
         return jsonify({"status": "error", "message": "Route locations not found"}), 404
 
-    route_to_locations = get_route(route_start, [all_route[0]["locations"]["all_points"][0][1], all_route[0]["locations"]["all_points"][0][0]], profile="foot")
+    route_to_locations = get_route(route_start, route_end, profile="foot")
 
     if not route_to_locations:
         # return jsonify({"status": "error", "message": "Route not found"}), 404
@@ -440,7 +466,56 @@ def function_get_pois_by_route(route_id):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ===== RUTA PARA CREAR TOKENS PERSONALIZADOS =====
+@app.route("/generate-token", methods=["POST"])
+def generate_token():
+    """
+    Espera un JSON como:
+    {
+        "expires_minutes": 30,
+        "rate_limit": "5 per minute",
+        "admin_key": "your_admin_key"
+    }
+    """
+    data = request.get_json()
+    expires_minutes = data.get("expires_minutes", 15)
+    rate_limit = data.get("rate_limit", "10 per minute")
+    admin_key = data.get("admin_key", None)
+
+    if admin_key != os.getenv("ADMIN_KEY"):
+        return jsonify({"status": "error", "message": "Invalid admin key"}), 403
+
+    # Genera un token con claims personalizados
+    additional_claims = {
+        "rate_limit": rate_limit
+    }
+
+    access_token = create_access_token(
+        identity="custom_user",
+        additional_claims=additional_claims,
+        expires_delta=datetime.timedelta(minutes=expires_minutes)
+    )
+
+    return jsonify(access_token=access_token)
+
+
 @app.route('/get_all_pois', methods=['GET'])
+@jwt_required()
 def function_get_all_pois():
     """
     Endpoint to get all points of interest (POIs).
@@ -468,12 +543,66 @@ def function_get_all_pois():
       404:
         description: Puntos de interés no encontrados
     """
-    result = dto.get_all_pois()
-    
-    if not result:
-        return jsonify({"status": "error", "message": "POIs not found"}), 404
-    
-    return jsonify({"status": "ok", "data": result}), 200
+    claims = get_jwt()
+    rate_limit = claims.get("rate_limit", "5 per minute")  # valor por defecto
+
+    @limiter.limit(rate_limit)
+    def inner():
+        result = dto.get_all_pois()
+        
+        if not result:
+            return jsonify({"status": "error", "message": "POIs not found"}), 404
+        
+        return jsonify({"status": "ok", "data": result}), 200
+
+    return inner()
+
+@app.route('/get_poi/<poi_id>', methods=['GET'])
+@jwt_required()
+def function_get_poi_by_id_ext(poi_id):
+    """
+    Endpoint to get a point of interest (POI) by its ID.
+    ---
+    tags:
+      - POI
+    parameters:
+      - in: path
+        name: poi_id
+        type: string
+        required: true
+        description: ID del punto de interés
+      - in: query
+        name: language_id
+        type: string
+        required: false
+        description: ID del idioma (opcional)
+    responses:
+      200:
+        description: Punto de interés encontrado
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+            data:
+              type: object
+      404:
+        description: Punto de interés no encontrado
+    """
+    claims = get_jwt()
+    rate_limit = claims.get("rate_limit", "10 per minute")  # valor por defecto
+
+    @limiter.limit(rate_limit)
+    def inner():
+        language_id = request.args.get('language_id', '6d68e409-c46e-4d4a-8560-f15256e9cbb3')
+        result = dto.get_poi_by_id(poi_id, language_id)
+        
+        if not result:
+            return jsonify({"status": "error", "message": "POI not found"}), 404
+        
+        return jsonify({"status": "ok", "data": result}), 200
+
+    return inner()
 
 
 
