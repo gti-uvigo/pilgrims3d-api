@@ -64,6 +64,7 @@ def get_poi_by_id(poi_id: str, language_id: str = "6d68e409-c46e-4d4a-8560-f1525
     :param poi_id: ID del punto de interés a buscar.
     :return: Punto de interés encontrado o None si no se encuentra.
     """
+    print("getting POI ID:", poi_id)
     poi = get_method("pois", {"id": poi_id})
     poi["title"] = get_text_by_lang(poi.get("titles", []), language_id)
     poi["description"] = get_text_by_lang(poi.get("descriptions", []), language_id)
@@ -143,4 +144,22 @@ def get_all_pois():
                 del poi[key]
     return pois
 
+
+def get_all_routes_by_route_type(route_type: str, language_id: str = "6d68e409-c46e-4d4a-8560-f15256e9cbb3"):
+    """
+    Obtiene todas las rutas filtradas por tipo de ruta.
+    
+    :param route_type: Tipo de ruta a filtrar.
+    :return: Lista de rutas que coinciden con el tipo especificado.
+    """
+    if not route_type:
+        raise ValueError("El tipo de ruta no puede ser vacío.")
+    routes = get_method("routes", {"route_type": route_type, "type": { "$nin": ["deactivated", "pilgrim"] }}, many=True)
+    for route in routes:
+        route["title"] = get_text_by_lang(route.get("titles", []), language_id)
+        route["route"] = route['locations']['all_points']
+        for key in ["_id", "titles", "short_descriptions", "long_descriptions", "stages", "locations", "updated_at", "owner_id", "image_id", "visibility", "distance", "type", "ratings"]:
+            if key in route:
+                del route[key]
+    return routes
 

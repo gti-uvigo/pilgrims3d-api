@@ -73,7 +73,7 @@ def function_get_all_routes():
     
     route_type = body["route_type"]
     tipe = body["type"]
-    language_id = request.args.get('language_id', '6d68e409-c46e-4d4a-8560-f15256e9cbb3')
+    language_id = body['language_id'] if 'language_id' in body else '6d68e409-c46e-4d4a-8560-f15256e9cbb3'
 
     print(f"Received route_type: {route_type}, type: {tipe}, language_id: {language_id}")
 
@@ -606,7 +606,16 @@ def function_get_poi_by_id_ext(poi_id):
 
 
 
+@app.route('/get_all_routes_by_route_type', methods=['POST'])
+def get_all_routes_by_route_type():
+    """
+    """
+    body = request.get_json() 
+    route_type_id = body.get('route_type', None)
+    lang_id = body.get('language_id', '6d68e409-c46e-4d4a-8560-f15256e9cbb3')
+    result = dto.get_all_routes_by_route_type(route_type_id, lang_id)
 
+    return jsonify({"status": "ok", "data": result}), 200
 
 swagger = flasgger.Swagger(app, template=swagger_config)
 
