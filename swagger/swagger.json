@@ -1,0 +1,736 @@
+{
+  "info": {
+    "title": "Rurallure API",
+    "description": "Documentación de la API de rutas y puntos de interés de Rurallure.",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/routes": {
+      "post": {
+        "summary": "Endpoint to get all available routes in the API.",
+        "responses": {
+          "200": {
+            "description": "Lista de rutas encontradas",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string"
+                },
+                "data": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ruta no encontrada"
+          }
+        },
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "route_type": {
+                  "type": "string",
+                  "example": "cultural"
+                },
+                "type": {
+                  "type": "string",
+                  "example": "main"
+                }
+              }
+            }
+          },
+          {
+            "in": "query",
+            "name": "language_id",
+            "type": "string",
+            "required": false,
+            "description": "ID del idioma (opcional)"
+          }
+        ],
+        "tags": [
+          "Routes"
+        ]
+      }
+    },
+    "/route_stages/{route_id}/{language_id}": {
+      "get": {
+        "summary": "Endpoint to get all stages of a specific route.",
+        "responses": {
+          "200": {
+            "description": "Lista de etapas de la ruta",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string"
+                },
+                "data": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ruta no encontrada"
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "route_id",
+            "type": "string",
+            "required": true,
+            "description": "ID de la ruta"
+          },
+          {
+            "in": "path",
+            "name": "language_id",
+            "type": "string",
+            "required": true,
+            "description": "ID del idioma"
+          }
+        ],
+        "tags": [
+          "Routes"
+        ]
+      }
+    },
+    "/route_locations/{route_id}": {
+      "get": {
+        "summary": "Endpoint to get all locations of a specific route.",
+        "responses": {
+          "200": {
+            "description": "Lista de localizaciones de la ruta",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string"
+                },
+                "data": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Localizaciones de la ruta no encontradas"
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "route_id",
+            "type": "string",
+            "required": true,
+            "description": "ID de la ruta"
+          }
+        ],
+        "tags": [
+          "Routes"
+        ]
+      },
+      "post": {
+        "summary": "Endpoint to get all locations of a specific route from a start point.",
+        "responses": {
+          "200": {
+            "description": "Localizaciones de la ruta y ruta hasta el inicio",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string"
+                },
+                "data": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Cuerpo de la petición inválido"
+          },
+          "404": {
+            "description": "Localizaciones de la ruta no encontradas"
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "route_id",
+            "type": "string",
+            "required": true,
+            "description": "ID de la ruta"
+          },
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "start_points": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "example": [
+                    42.123,
+                    -3.456
+                  ]
+                }
+              }
+            }
+          }
+        ],
+        "tags": [
+          "Routes"
+        ]
+      }
+    },
+    "/poi/{poi_id}": {
+      "get": {
+        "summary": "Endpoint to get a point of interest (POI) by its ID.",
+        "responses": {
+          "200": {
+            "description": "Punto de interés encontrado",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string"
+                },
+                "data": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Punto de interés no encontrado"
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "poi_id",
+            "type": "string",
+            "required": true,
+            "description": "ID del punto de interés"
+          },
+          {
+            "in": "query",
+            "name": "language_id",
+            "type": "string",
+            "required": false,
+            "description": "ID del idioma (opcional)"
+          }
+        ],
+        "tags": [
+          "POI"
+        ]
+      }
+    },
+    "/languages": {
+      "get": {
+        "summary": "Endpoint to get all available languages.",
+        "responses": {
+          "200": {
+            "description": "Lista de idiomas disponibles",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string"
+                },
+                "data": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Idiomas no encontrados"
+          }
+        },
+        "tags": [
+          "Languages"
+        ]
+      }
+    },
+    "/route_types": {
+      "get": {
+        "summary": "Endpoint to get all available route types.",
+        "responses": {
+          "200": {
+            "description": "Lista de tipos de ruta disponibles",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string"
+                },
+                "data": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Tipos de ruta no encontrados"
+          }
+        },
+        "tags": [
+          "Routes"
+        ]
+      }
+    },
+    "/images/{image_id}": {
+      "get": {
+        "summary": "Endpoint to download an image stored in GridFS by its ID.",
+        "responses": {
+          "200": {
+            "description": "Imagen encontrada"
+          },
+          "404": {
+            "description": "Imagen no encontrada"
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "image_id",
+            "type": "string",
+            "required": true,
+            "description": "ID de la imagen"
+          }
+        ],
+        "tags": [
+          "Images"
+        ]
+      }
+    },
+    "/pois_types/{language_id}": {
+      "get": {
+        "summary": "Endpoint to get all available POI types.",
+        "responses": {
+          "200": {
+            "description": "Lista de tipos de POIs disponibles",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string"
+                },
+                "data": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Tipos de POIs no encontrados"
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "language_id",
+            "type": "string",
+            "required": true,
+            "description": "ID del idioma"
+          }
+        ],
+        "tags": [
+          "POI Types"
+        ]
+      }
+    },
+    "/pois_by_route/{route_id}": {
+      "get": {
+        "summary": "Endpoint to get all points of interest (POIs) for a specific route.",
+        "responses": {
+          "200": {
+            "description": "Lista de puntos de interés encontrados",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string"
+                },
+                "data": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ruta o puntos de interés no encontrados"
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "route_id",
+            "type": "string",
+            "required": true,
+            "description": "ID de la ruta"
+          },
+          {
+            "in": "query",
+            "name": "language_id",
+            "type": "string",
+            "required": false,
+            "description": "ID del idioma (opcional)"
+          }
+        ],
+        "tags": [
+          "POI"
+        ]
+      }
+    },
+    "/generate-token": {
+      "post": {
+        "summary": "Endpoint to generate a custom JWT token with specific claims.",
+        "responses": {
+          "200": {
+            "description": "Token generated successfully",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "access_token": {
+                  "type": "string",
+                  "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Invalid admin key"
+          },
+          "400": {
+            "description": "Invalid request body"
+          }
+        },
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "expires_minutes": {
+                  "type": "integer",
+                  "example": 15
+                },
+                "rate_limit": {
+                  "type": "string",
+                  "example": "10 per minute"
+                },
+                "admin_key": {
+                  "type": "string",
+                  "example": "your_admin_key"
+                }
+              }
+            }
+          }
+        ],
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/get_all_pois": {
+      "get": {
+        "summary": "Endpoint to get all points of interest (POIs).",
+        "responses": {
+          "200": {
+            "description": "List of found points of interest",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string"
+                },
+                "data": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Points of interest not found"
+          }
+        },
+        "parameters": [
+          {
+            "in": "query",
+            "name": "language_id",
+            "type": "string",
+            "required": false,
+            "description": "Optional language ID"
+          }
+        ],
+        "tags": [
+          "POI"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/get_poi/{poi_id}": {
+      "get": {
+        "summary": "Endpoint to get a point of interest (POI) by its ID.",
+        "responses": {
+          "200": {
+            "description": "POI found",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string"
+                },
+                "data": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "POI not found"
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "poi_id",
+            "type": "string",
+            "required": true,
+            "description": "POI ID"
+          },
+          {
+            "in": "query",
+            "name": "language_id",
+            "type": "string",
+            "required": false,
+            "description": "Optional language ID"
+          }
+        ],
+        "tags": [
+          "POI"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/register_user": {
+      "post": {
+        "summary": "Endpoint to register a new user.",
+        "responses": {
+          "200": {
+            "description": "Usuario registrado exitosamente",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string"
+                },
+                "data": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada inválidos"
+          }
+        },
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "fcm_token": {
+                  "type": "string",
+                  "example": "132231234"
+                },
+                "id_token": {
+                  "type": "string",
+                  "example": "433352562"
+                },
+                "email": {
+                  "type": "string",
+                  "example": "user@example.com"
+                },
+                "latitude": {
+                  "type": "number",
+                  "example": 42.123456
+                },
+                "longitude": {
+                  "type": "number",
+                  "example": -71.123456
+                },
+                "timestamp": {
+                  "type": "string",
+                  "example": "2023-10-01T12:00:00Z"
+                }
+              }
+            }
+          }
+        ],
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/update_user": {
+      "post": {
+        "summary": "Endpoint to update an existing user.",
+        "responses": {
+          "200": {
+            "description": "Usuario actualizado exitosamente",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string"
+                },
+                "data": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada inválidos"
+          }
+        },
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "id_token": {
+                  "type": "string",
+                  "example": "433352562"
+                },
+                "latitude": {
+                  "type": "number",
+                  "example": 42.123456
+                },
+                "longitude": {
+                  "type": "number",
+                  "example": -71.123456
+                },
+                "timestamp": {
+                  "type": "string",
+                  "example": "2023-10-01T12:00:00Z"
+                }
+              }
+            }
+          }
+        ],
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/send_notification_sos": {
+      "post": {
+        "summary": "Endpoint to send a notification to a user.",
+        "responses": {
+          "200": {
+            "description": "Notificación enviada exitosamente",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string"
+                },
+                "data": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada inválidos"
+          }
+        },
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "id_token": {
+                  "type": "string",
+                  "example": "433352562"
+                }
+              }
+            }
+          }
+        ],
+        "tags": [
+          "Notifications"
+        ]
+      }
+    }
+  },
+  "definitions": {},
+  "swagger": "2.0",
+  "securityDefinitions": {
+    "BearerAuth": {
+      "type": "apiKey",
+      "name": "Authorization",
+      "in": "header",
+      "description": " Enter yourJWT token as **Bearer <token>**"
+    }
+  }
+}

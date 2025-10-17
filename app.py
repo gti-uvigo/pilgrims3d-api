@@ -390,6 +390,38 @@ def function_download_image(image_id):
     
     return response
 
+@app.route('/image/<image_id>', methods=['GET'])
+@jwt_required()
+def function_download_image_tm(image_id):
+    """
+    Endpoint to download an image stored in GridFS by its ID.
+    ---
+    tags:
+      - Images
+    parameters:
+      - in: path
+        name: image_id
+        type: string
+        required: true
+        description: ID de la imagen
+    responses:
+      200:
+        description: Imagen encontrada
+      404:
+        description: Imagen no encontrada
+    """
+    claims = get_jwt()
+    rate_limit = claims.get("rate_limit", "10 per minute")  # valor por defecto
+    @limiter.limit(rate_limit)
+    def download_image():
+        response = dto.get_image_by_id(image_id)
+        
+        if response is None:
+            return jsonify({"status": "error", "message": "Image not found"}), 404
+
+        return response
+    return download_image()
+
 @app.route("/pois_types/<language_id>", methods=["GET"])
 def function_get_pois_types(language_id):  
     """
@@ -855,7 +887,7 @@ def send_notification_sos():
         print("Mensaje enviado:", respuesta)
 
     if fcm_tokens_send == []:
-        return jsonify({"status": "error", "message": "No nearby users to notify, call 911"}), 404
+        return jsonify({"status": "error", "message": "No nearby users to notify, call 911"}), 445
     for token in fcm_tokens_send:
         enviar_mensaje(token, titulo, cuerpo)
 
@@ -865,16 +897,16 @@ swagger = flasgger.Swagger(app, template=swagger_config)
 
 
 if __name__ == '__main__':
-    # generate swagger documentation
-    # with app.app_context():
-    #     swagger_spec = swagger.get_apispecs()
-    #     # Guardar en JSON
-    #     with open("swagger.json", "w", encoding="utf-8") as f:
-    #         json.dump(swagger_spec, f, indent=2, ensure_ascii=False)
+  # # generate swagger documentation
+  # with app.app_context():
+  #     swagger_spec = swagger.get_apispecs()
+  #     # Guardar en JSON
+  #     with open("swagger/swagger.json", "w", encoding="utf-8") as f:
+  #         json.dump(swagger_spec, f, indent=2, ensure_ascii=False)
 
-    #     # Guardar también en YAML (opcional)
-    #     with open("swagger.yaml", "w", encoding="utf-8") as f:
-    #         yaml.dump(swagger_spec, f, allow_unicode=True)
+  #     # Guardar también en YAML (opcional)
+  #     with open("swagger/swagger.yaml", "w", encoding="utf-8") as f:
+  #         yaml.dump(swagger_spec, f, allow_unicode=True)
 
-    #     print("✅ Swagger guardado en swagger.json y swagger.yaml")
-    app.run(debug=True, host='127.0.0.1', port=5000)
+  #     print("✅ Swagger guardado en swagger.json y swagger.yaml")
+  app.run(debug=True, host='127.0.0.1', port=5000)

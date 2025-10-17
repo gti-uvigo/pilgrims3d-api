@@ -1,0 +1,219 @@
+{
+  "swagger": "2.0",
+  "schemes": ["https"],
+  "securityDefinitions": {
+    "BearerAuth": {
+      "type": "apiKey",
+      "name": "Authorization",
+      "in": "header",
+      "description": "Enter your JWT token as **Bearer <token>**"
+    }
+  },
+  "host": "rurallure-api.duckdns.org",
+  "basePath": "/",
+    "info": {
+    "title": "Pilgrim's 3D",
+    "description": "API documentation for routes and points of interest in the Pilgrim's 3D project.",
+    "version": "1.0.0"
+  },
+  "paths":{
+    "/generate-token": {
+      "post": {
+        "summary": "Endpoint to generate a custom JWT token with specific claims.",
+        "responses": {
+          "200": {
+            "description": "Token generated successfully",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "access_token": {
+                  "type": "string",
+                  "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Invalid admin key"
+          },
+          "400": {
+            "description": "Invalid request body"
+          }
+        },
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "expires_minutes": {
+                  "type": "integer",
+                  "example": 15
+                },
+                "rate_limit": {
+                  "type": "string",
+                  "example": "10 per minute"
+                },
+                "admin_key": {
+                  "type": "string",
+                  "example": "your_admin_key"
+                }
+              }
+            }
+          }
+        ],
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/get_all_pois": {
+      "get": {
+        "summary": "Retrieve all available Points of Interest (POIs).",
+        "responses": {
+          "200": {
+            "description": "List of all found POIs",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string"
+                },
+                "data": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No POIs found"
+          }
+        },
+    "parameters": [
+      {
+        "in": "query",
+        "name": "language_id",
+        "type": "string",
+        "required": false,
+        "description": "Optional language ID.\n\n**Available languages:**\n- Catalan → `0e34c1b7-a13f-462d-86a0-53a9e9102e1e`\n- English → `30ca940f-9291-42b1-be41-2d3c93e70f56`\n- French → `5699e82f-bb46-4064-bc5a-d0732fa8d042`\n- German → `9a0d2b33-6f76-49f5-8cf9-c44a55d7e750`\n- Italian → `bf7a8362-b208-4c56-a733-90277419d784`\n- Portuguese → `2f12dcc0-13ba-4613-9c05-499572b35ec3`\n- Spanish → `6d68e409-c46e-4d4a-8560-f15256e9cbb3`\n- Galician → `c1d2e3f4-g5h6-i7j8-k9l0-m1n2o3p4q5r6`",
+        "enum": [
+          "0e34c1b7-a13f-462d-86a0-53a9e9102e1e",
+          "30ca940f-9291-42b1-be41-2d3c93e70f56",
+          "5699e82f-bb46-4064-bc5a-d0732fa8d042",
+          "9a0d2b33-6f76-49f5-8cf9-c44a55d7e750",
+          "bf7a8362-b208-4c56-a733-90277419d784",
+          "2f12dcc0-13ba-4613-9c05-499572b35ec3",
+          "6d68e409-c46e-4d4a-8560-f15256e9cbb3",
+          "c1d2e3f4-g5h6-i7j8-k9l0-m1n2o3p4q5r6"
+        ],
+        "example": "6d68e409-c46e-4d4a-8560-f15256e9cbb3"
+      }
+    ],
+        "tags": [
+          "POI"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/get_poi/{poi_id}": {
+      "get": {
+        "summary": "Retrieve a specific Point of Interest (POI) by its ID.",
+        "responses": {
+          "200": {
+            "description": "POI found successfully",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string"
+                },
+                "data": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "POI not found"
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "poi_id",
+            "type": "string",
+            "required": true,
+            "description": "Unique ID of the POI"
+          },
+          {
+            "in": "query",
+            "name": "language_id",
+            "type": "string",
+            "required": false,
+        "description": "Optional language ID.\n\n**Available languages:**\n- Catalan → `0e34c1b7-a13f-462d-86a0-53a9e9102e1e`\n- English → `30ca940f-9291-42b1-be41-2d3c93e70f56`\n- French → `5699e82f-bb46-4064-bc5a-d0732fa8d042`\n- German → `9a0d2b33-6f76-49f5-8cf9-c44a55d7e750`\n- Italian → `bf7a8362-b208-4c56-a733-90277419d784`\n- Portuguese → `2f12dcc0-13ba-4613-9c05-499572b35ec3`\n- Spanish → `6d68e409-c46e-4d4a-8560-f15256e9cbb3`\n- Galician → `c1d2e3f4-g5h6-i7j8-k9l0-m1n2o3p4q5r6`",
+        "enum": [
+          "0e34c1b7-a13f-462d-86a0-53a9e9102e1e",
+          "30ca940f-9291-42b1-be41-2d3c93e70f56",
+          "5699e82f-bb46-4064-bc5a-d0732fa8d042",
+          "9a0d2b33-6f76-49f5-8cf9-c44a55d7e750",
+          "bf7a8362-b208-4c56-a733-90277419d784",
+          "2f12dcc0-13ba-4613-9c05-499572b35ec3",
+          "6d68e409-c46e-4d4a-8560-f15256e9cbb3",
+          "c1d2e3f4-g5h6-i7j8-k9l0-m1n2o3p4q5r6"
+        ],
+        "example": "6d68e409-c46e-4d4a-8560-f15256e9cbb3"
+          }
+        ],
+        "tags": [
+          "POI"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+        "/image/{image_id}": {
+      "get": {
+        "summary": "Endpoint to download an image stored in GridFS by its ID.",
+        "responses": {
+          "200": {
+            "description": "Imagen encontrada"
+          },
+          "404": {
+            "description": "Imagen no encontrada"
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "image_id",
+            "type": "string",
+            "required": true,
+            "description": "ID de la imagen"
+          }
+        ],
+        "tags": [
+          "Images"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    }
+  },
+  "definitions": {}
+}
+

@@ -1,0 +1,479 @@
+definitions: !!python/object/apply:collections.defaultdict
+- &id001 !!python/name:builtins.dict ''
+info:
+  description: Documentación de la API de rutas y puntos de interés de Rurallure.
+  title: Rurallure API
+  version: 1.0.0
+paths: !!python/object/apply:collections.defaultdict
+  args:
+  - *id001
+  dictitems:
+    /generate-token:
+      post:
+        parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            properties:
+              admin_key:
+                example: your_admin_key
+                type: string
+              expires_minutes:
+                example: 15
+                type: integer
+              rate_limit:
+                example: 10 per minute
+                type: string
+            type: object
+        responses:
+          '200':
+            description: Token generated successfully
+            schema:
+              properties:
+                access_token:
+                  example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                  type: string
+              type: object
+          '400':
+            description: Invalid request body
+          '403':
+            description: Invalid admin key
+        summary: Endpoint to generate a custom JWT token with specific claims.
+        tags:
+        - Auth
+    /get_all_pois:
+      get:
+        parameters:
+        - description: Optional language ID
+          in: query
+          name: language_id
+          required: false
+          type: string
+        responses:
+          '200':
+            description: List of found points of interest
+            schema:
+              properties:
+                data:
+                  items:
+                    type: object
+                  type: array
+                status:
+                  type: string
+              type: object
+          '404':
+            description: Points of interest not found
+        security:
+        - BearerAuth: []
+        summary: Endpoint to get all points of interest (POIs).
+        tags:
+        - POI
+    /get_poi/{poi_id}:
+      get:
+        parameters:
+        - description: POI ID
+          in: path
+          name: poi_id
+          required: true
+          type: string
+        - description: Optional language ID
+          in: query
+          name: language_id
+          required: false
+          type: string
+        responses:
+          '200':
+            description: POI found
+            schema:
+              properties:
+                data:
+                  type: object
+                status:
+                  type: string
+              type: object
+          '404':
+            description: POI not found
+        security:
+        - BearerAuth: []
+        summary: Endpoint to get a point of interest (POI) by its ID.
+        tags:
+        - POI
+    /images/{image_id}:
+      get:
+        parameters:
+        - description: ID de la imagen
+          in: path
+          name: image_id
+          required: true
+          type: string
+        responses:
+          '200':
+            description: Imagen encontrada
+          '404':
+            description: Imagen no encontrada
+        summary: Endpoint to download an image stored in GridFS by its ID.
+        tags:
+        - Images
+    /languages:
+      get:
+        responses:
+          '200':
+            description: Lista de idiomas disponibles
+            schema:
+              properties:
+                data:
+                  items:
+                    type: object
+                  type: array
+                status:
+                  type: string
+              type: object
+          '404':
+            description: Idiomas no encontrados
+        summary: Endpoint to get all available languages.
+        tags:
+        - Languages
+    /poi/{poi_id}:
+      get:
+        parameters:
+        - description: ID del punto de interés
+          in: path
+          name: poi_id
+          required: true
+          type: string
+        - description: ID del idioma (opcional)
+          in: query
+          name: language_id
+          required: false
+          type: string
+        responses:
+          '200':
+            description: Punto de interés encontrado
+            schema:
+              properties:
+                data:
+                  type: object
+                status:
+                  type: string
+              type: object
+          '404':
+            description: Punto de interés no encontrado
+        summary: Endpoint to get a point of interest (POI) by its ID.
+        tags:
+        - POI
+    /pois_by_route/{route_id}:
+      get:
+        parameters:
+        - description: ID de la ruta
+          in: path
+          name: route_id
+          required: true
+          type: string
+        - description: ID del idioma (opcional)
+          in: query
+          name: language_id
+          required: false
+          type: string
+        responses:
+          '200':
+            description: Lista de puntos de interés encontrados
+            schema:
+              properties:
+                data:
+                  items:
+                    type: object
+                  type: array
+                status:
+                  type: string
+              type: object
+          '404':
+            description: Ruta o puntos de interés no encontrados
+        summary: Endpoint to get all points of interest (POIs) for a specific route.
+        tags:
+        - POI
+    /pois_types/{language_id}:
+      get:
+        parameters:
+        - description: ID del idioma
+          in: path
+          name: language_id
+          required: true
+          type: string
+        responses:
+          '200':
+            description: Lista de tipos de POIs disponibles
+            schema:
+              properties:
+                data:
+                  items:
+                    type: object
+                  type: array
+                status:
+                  type: string
+              type: object
+          '404':
+            description: Tipos de POIs no encontrados
+        summary: Endpoint to get all available POI types.
+        tags:
+        - POI Types
+    /register_user:
+      post:
+        parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            properties:
+              email:
+                example: user@example.com
+                type: string
+              fcm_token:
+                example: '132231234'
+                type: string
+              id_token:
+                example: '433352562'
+                type: string
+              latitude:
+                example: 42.123456
+                type: number
+              longitude:
+                example: -71.123456
+                type: number
+              timestamp:
+                example: '2023-10-01T12:00:00Z'
+                type: string
+            type: object
+        responses:
+          '200':
+            description: Usuario registrado exitosamente
+            schema:
+              properties:
+                data:
+                  type: object
+                status:
+                  type: string
+              type: object
+          '400':
+            description: Datos de entrada inválidos
+        summary: Endpoint to register a new user.
+        tags:
+        - Users
+    /route_locations/{route_id}:
+      get:
+        parameters:
+        - description: ID de la ruta
+          in: path
+          name: route_id
+          required: true
+          type: string
+        responses:
+          '200':
+            description: Lista de localizaciones de la ruta
+            schema:
+              properties:
+                data:
+                  items:
+                    type: object
+                  type: array
+                status:
+                  type: string
+              type: object
+          '404':
+            description: Localizaciones de la ruta no encontradas
+        summary: Endpoint to get all locations of a specific route.
+        tags:
+        - Routes
+      post:
+        parameters:
+        - description: ID de la ruta
+          in: path
+          name: route_id
+          required: true
+          type: string
+        - in: body
+          name: body
+          required: true
+          schema:
+            properties:
+              start_points:
+                example:
+                - 42.123
+                - -3.456
+                items:
+                  type: number
+                type: array
+            type: object
+        responses:
+          '200':
+            description: Localizaciones de la ruta y ruta hasta el inicio
+            schema:
+              properties:
+                data:
+                  type: object
+                status:
+                  type: string
+              type: object
+          '400':
+            description: Cuerpo de la petición inválido
+          '404':
+            description: Localizaciones de la ruta no encontradas
+        summary: Endpoint to get all locations of a specific route from a start point.
+        tags:
+        - Routes
+    /route_stages/{route_id}/{language_id}:
+      get:
+        parameters:
+        - description: ID de la ruta
+          in: path
+          name: route_id
+          required: true
+          type: string
+        - description: ID del idioma
+          in: path
+          name: language_id
+          required: true
+          type: string
+        responses:
+          '200':
+            description: Lista de etapas de la ruta
+            schema:
+              properties:
+                data:
+                  items:
+                    type: object
+                  type: array
+                status:
+                  type: string
+              type: object
+          '404':
+            description: Ruta no encontrada
+        summary: Endpoint to get all stages of a specific route.
+        tags:
+        - Routes
+    /route_types:
+      get:
+        responses:
+          '200':
+            description: Lista de tipos de ruta disponibles
+            schema:
+              properties:
+                data:
+                  items:
+                    type: object
+                  type: array
+                status:
+                  type: string
+              type: object
+          '404':
+            description: Tipos de ruta no encontrados
+        summary: Endpoint to get all available route types.
+        tags:
+        - Routes
+    /routes:
+      post:
+        parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            properties:
+              route_type:
+                example: cultural
+                type: string
+              type:
+                example: main
+                type: string
+            type: object
+        - description: ID del idioma (opcional)
+          in: query
+          name: language_id
+          required: false
+          type: string
+        responses:
+          '200':
+            description: Lista de rutas encontradas
+            schema:
+              properties:
+                data:
+                  items:
+                    type: object
+                  type: array
+                status:
+                  type: string
+              type: object
+          '404':
+            description: Ruta no encontrada
+        summary: Endpoint to get all available routes in the API.
+        tags:
+        - Routes
+    /send_notification_sos:
+      post:
+        parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            properties:
+              id_token:
+                example: '433352562'
+                type: string
+            type: object
+        responses:
+          '200':
+            description: Notificación enviada exitosamente
+            schema:
+              properties:
+                data:
+                  type: object
+                status:
+                  type: string
+              type: object
+          '400':
+            description: Datos de entrada inválidos
+        summary: Endpoint to send a notification to a user.
+        tags:
+        - Notifications
+    /update_user:
+      post:
+        parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            properties:
+              id_token:
+                example: '433352562'
+                type: string
+              latitude:
+                example: 42.123456
+                type: number
+              longitude:
+                example: -71.123456
+                type: number
+              timestamp:
+                example: '2023-10-01T12:00:00Z'
+                type: string
+            type: object
+        responses:
+          '200':
+            description: Usuario actualizado exitosamente
+            schema:
+              properties:
+                data:
+                  type: object
+                status:
+                  type: string
+              type: object
+          '400':
+            description: Datos de entrada inválidos
+        summary: Endpoint to update an existing user.
+        tags:
+        - Users
+securityDefinitions:
+  BearerAuth:
+    description: ' Enter yourJWT token as **Bearer <token>**'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: '2.0'
