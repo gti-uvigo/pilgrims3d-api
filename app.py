@@ -108,24 +108,29 @@ def function_get_all_routes():
 
 
 
-@app.route('/route_stages/<route_id>/<language_id>', methods=['GET'])
-def function_get_route_stages(route_id, language_id):
+@app.route('/route_stages', methods=['POST'])
+def function_get_route_stages():
     """
     Endpoint to get all stages of a specific route.
     ---
     tags:
       - Routes
     parameters:
-      - in: path
-        name: route_id
-        type: string
+      - in: body
+        name: body
         required: true
-        description: ID de la ruta
-      - in: path
-        name: language_id
-        type: string
-        required: true
-        description: ID del idioma
+        schema:
+          type: object
+          properties:
+            route_id:
+              type: string
+              example: "route123"
+            language_id:
+              type: string
+              example: "6d68e409-c46e-4d4a-8560-f15256e9cbb3"
+            user_id:
+              type: string
+              example: "user123"
     responses:
       200:
         description: Lista de etapas de la ruta
@@ -141,6 +146,11 @@ def function_get_route_stages(route_id, language_id):
       404:
         description: Ruta no encontrada
     """
+    body = request.get_json()
+    route_id = body.get('route_id', None)
+    language_id = body.get('language_id', '6d68e409-c46e-4d4a-8560-f15256e9cbb3')
+    user_id = body.get('user_id', None)
+
     result = dto.get_route_stages(route_id)
     print(result)
     if not result:
@@ -155,10 +165,60 @@ def function_get_route_stages(route_id, language_id):
                 stage["points_of_interest"][idx]["types"] = poi_data.get("types")
                 stage["points_of_interest"][idx]["latitude"] = poi_data.get("latitude")
                 stage["points_of_interest"][idx]["longitude"] = poi_data.get("longitude")
-
+                stage["points_of_interest"][idx]["is_mobility_friendly"] = poi_data.get("is_mobility_friendly")
+                stage["points_of_interest"][idx]["rating"] = poi_data.get("rating")
+                stage["points_of_interest"][idx]["user_rating"] = dto.get_user_rating_for_poi(user_id, poi["id"]) if user_id else None
     return jsonify({"status": "ok", "data": result}), 200
 
 
+@app.route("/rate_poi", methods=["POST"])
+def function_rate_poi():
+  """
+  Endpoint to rate a point of interest (POI).
+  ---
+  tags:
+    - POI
+  parameters:
+    - in: body
+      name: body
+      required: true
+      schema:
+        type: object
+        properties:
+          poi_id:
+            type: string
+            example: "poi123"
+          user_id:
+            type: string
+            example: "user123" 
+          rating:
+            type: integer
+            example: 4
+  responses:
+    200:
+      description: Calificación registrada exitosamente
+      schema:
+        type: object
+        properties:
+          status:
+            type: string
+          data:
+            type: object
+    400:
+      description: Datos de entrada inválidos
+  """
+  body = request.get_json()
+  poi_id = body.get('poi_id', None)
+  user_id = body.get('user_id', None)
+  rating = body.get('rating', None)
+
+  if not poi_id or not user_id or rating is None:
+      return jsonify({"status": "error", "message": "Missing required fields"}), 400
+
+  new_rating = dto.rate_poi(user_id=user_id, poi_id=poi_id, score=rating)
+  print("----------------------------------New rating:", new_rating)
+
+  return jsonify({"status": "ok", "data": new_rating}), 200
 
 @app.route('/route_locations/<route_id>', methods=['GET'])
 def function_get_route_locations(route_id):
@@ -1124,13 +1184,15 @@ def upload_poi_to_mongo():
       booking = body.get('booking', None)
       minutes_duration = body.get('minutes_duration', None)
       zenodo_url = body.get('zenodo_url', None)
+      is_mobility_friendly = body.get('is_mobility_friendly', None)
+      opening_hours = body.get('opening_hours', None)
 
       
 
       image = utils.base64StringToJpg(image_base64)
 
 
-      dto.create_poi(image, titles, descriptions_list, latitude, longitude, types, user_email=user_email, address=address, website=website, booking=booking, minutes_duration=minutes_duration, zenodo_url=zenodo_url)
+      dto.create_poi(image, titles, descriptions_list, latitude, longitude, types, user_email=user_email, address=address, website=website, booking=booking, minutes_duration=minutes_duration, zenodo_url=zenodo_url, is_mobility_friendly=is_mobility_friendly, opening_hours=opening_hours)
 
       #mandamos notificacion de que se ha subido el POI
       titulo = "POI Created Successfully"

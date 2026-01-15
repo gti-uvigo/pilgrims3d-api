@@ -227,7 +227,7 @@ def get_all_routes_by_route_type(route_type: str, language_id: str = "6d68e409-c
 
 
 
-def create_poi(image, titles, descriptions, latitude, longitude, types, user_email, address = None, website = None, booking = None, minutes_duration = None, rating = None, planner_priority = None, zenodo_url = None):
+def create_poi(image, titles, descriptions, latitude, longitude, types, user_email, address = None, website = None, booking = None, minutes_duration = None, rating = None, planner_priority = None, zenodo_url = None, is_mobility_friendly = None, opening_hours = None):
     """
     Crea un nuevo punto de interés (POI) en la base de datos.
     
@@ -244,7 +244,8 @@ def create_poi(image, titles, descriptions, latitude, longitude, types, user_ema
     :param rating: Calificación del POI (opcional).
     :param planner_priority: Prioridad en el planificador para el POI (opcional).
     :param zenodo_url: URL de Zenodo para el POI (opcional).
-    
+    :param is_mobility_friendly: Indica si el POI es accesible para personas con movilidad reducida (opcional).
+    :param opening_hours: Horario de apertura del POI (opcional).
     :return: Resultado de la creación del POI.
     """
     # generamos un uuid para la imagen
@@ -270,6 +271,8 @@ def create_poi(image, titles, descriptions, latitude, longitude, types, user_ema
         "image_id": image_id,
         "owner": user_email,
         "zenodo_url": zenodo_url,
+        "is_mobility_friendly": is_mobility_friendly,
+        "opening_hours": opening_hours,
     }
     result = post_method("pois", poi_data)
     return result
@@ -552,3 +555,77 @@ def delete_route(route_id: str):
     """
     result = delete_method("routes", {"route_id": route_id})
     return result
+
+
+###########Ratings#############
+
+
+# añadimo el score a la colecction ratings
+def rate_poi(user_id:str, poi_id: str, score: int):
+    """
+    Añade una valoración a un punto de interés (POI) por parte de un usuario.
+    
+    :param user_id: ID del usuario que realiza la valoración.
+    :param poi_id: ID del punto de interés a valorar.
+    :param score: Puntuación otorgada al POI.
+    :return: Resultado de la creación de la valoración.
+    """
+    rating_data = {
+        "user_id": user_id,
+        "poi_id": poi_id,
+        "score": score,
+        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+    }
+
+    #compruebo si el usuario ya ha valorado el POI
+    existing_rating = get_method("ratings", {"user_id": user_id, "poi_id": poi_id})
+    if existing_rating:
+        #si ya ha valorado, actualizo la valoración
+        result = update_method("ratings", {"user_id": user_id, "poi_id": poi_id}, {"$set": {"score": score, "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")}})
+    else:
+        result = post_method("ratings", rating_data)
+
+    # actualizar la valoración media del POI
+    poi = get_method("pois", {"id": poi_id})
+    ratings = get_poi_ratings(poi_id)
+    total_score = sum([rating["score"] for rating in ratings])
+    average_score = total_score / len(ratings) if ratings else 0
+    poi["rating"] = {
+        "score": average_score,
+        "user_ratings_total": len(ratings)
+    }
+    update_method("pois", {"id": poi_id}, {"$set": {"rating": poi["rating"]}})
+    return poi["rating"]
+
+
+def get_poi_ratings(poi_id: str):
+    """
+    Obtiene todas las valoraciones de un punto de interés (POI).
+    
+    :param poi_id: ID del punto de interés cuyas valoraciones se desean obtener.
+    :return: Lista de valoraciones del POI.
+    """
+    ratings = get_method("ratings", {"poi_id": poi_id}, many=True)
+    for rating in ratings:
+        for key in ["_id"]:
+            if key in rating:
+                del rating[key]
+    return ratings
+
+def get_user_rating_for_poi(user_id: str, poi_id: str):
+    """
+    Obtiene la valoración de un usuario específico para un punto de interés (POI).
+    
+    :param user_id: ID del usuario.
+    :param poi_id: ID del punto de interés.
+    :return: Valoración del usuario para el POI o None si no se encuentra.
+    """
+    rating = get_method("ratings", {"user_id": user_id, "poi_id": poi_id})
+    if rating:
+        for key in ["_id"]:
+            if key in rating:
+                del rating[key]
+        rating = rating["score"]
+    else:
+        rating = None 
+    return rating
