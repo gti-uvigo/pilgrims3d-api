@@ -321,6 +321,54 @@ def function_get_route_locations_start(route_id):
     return jsonify({"status": "ok", "data": result}), 200
 
 
+@app.route('/get_my_routes', methods=['POST'])
+def function_get_my_routes():
+    """
+    Endpoint to get all routes created by a specific owner.
+    ---
+    tags:
+      - Routes
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          properties:
+            user_email:
+              type: string
+              example: "paco@email.com"
+              description: Email del propietario de las rutas
+            language_id:
+              type: string
+              example: "6d68e409-c46e-4d4a-8560-f15256e9cbb3"
+              description: ID del idioma (opcional)
+    responses:
+      200:
+        description: Lista de rutas del propietario
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+            data:
+              type: array
+              items:
+                type: object
+      404:
+        description: Rutas del propietario no encontradas
+    """
+
+    body = request.get_json()
+    owner = body.get('user_email', None)
+    language_id = body.get('language_id', '6d68e409-c46e-4d4a-8560-f15256e9cbb3')
+    result = dto.get_routes_by_owner(owner, language_id)
+    
+    if not result:
+        return jsonify({"status": "error", "message": "Owner's routes not found"}), 404
+    
+    return jsonify({"status": "ok", "data": result}), 200
+
 @app.route('/poi/<poi_id>', methods=['GET'])
 def function_get_poi_by_id(poi_id):
     """
@@ -1016,10 +1064,10 @@ def send_notification_sos():
                 # Calculo la distancia entre el usuario que envia el SOS y el usuario actual
                 R = 6371.0  # Radio de la Tierra en kilómetros
 
-                lat1 = radians(user["latitude"])
-                lon1 = radians(user["longitude"])
-                lat2 = radians(u["latitude"])
-                lon2 = radians(u["longitude"])
+                lat1 = radians(float(user["latitude"]))
+                lon1 = radians(float(user["longitude"]))
+                lat2 = radians(float(u["latitude"]))
+                lon2 = radians(float(u["longitude"]))
 
                 dlon = lon2 - lon1
                 dlat = lat2 - lat1
@@ -1030,7 +1078,7 @@ def send_notification_sos():
                 distance = R * c  # Distancia en kilómetros
 
                 print(f"Distance to user {u['id_token']}: {distance} km")
-                if distance <= 5.0:  # Si la distancia es menor o igual a 5 km
+                if distance <= 2.0:  # Si la distancia es menor o igual a 2 km
                     if u.get("fcm_token", None):
                         fcm_tokens_send.append(u["fcm_token"])
 
@@ -1238,10 +1286,12 @@ def two_points_route():
     longitude1 = body.get('longitude1', None)
     latitude2 = body.get('latitude2', None)
     longitude2 = body.get('longitude2', None)
+
+    print("Calculating route from ({}, {}) to ({}, {})".format(latitude1, longitude1, latitude2, longitude2))
     
     route = utils.get_route([latitude1, longitude1], [latitude2, longitude2], profile="foot")
 
-
+    print("Route calculated:", route)
     return jsonify({"status": "ok", "route": route}), 200
 
 
@@ -1276,7 +1326,7 @@ def create_route():
     poi_ids = body.get('poi_ids', [])
     owner = body.get('owner', None)
     subtype = body.get('subtype', None)
-
+    visibility = body.get('visibility', "public")
     pois_coords = []
     poi_image_ids = []
     poi_names = []
@@ -1339,7 +1389,7 @@ def create_route():
 
     total_distance = round(total_distance, 2)
 
-    route = dto.create_route(language_id, long_description, name, short_description, route_type, stages, locations, owner, subtype, total_distance, image_id = image_id, image_body=image_jpg)
+    route = dto.create_route(language_id, long_description, name, short_description, route_type, stages, locations, owner, subtype, total_distance, image_id = image_id, image_body=image_jpg, visibility=visibility)
     return jsonify({"status": "ok", "data": route}), 200
 
 
@@ -1354,26 +1404,283 @@ def delete_route(route_id):
     return jsonify({"status": "ok", "message": "Route deleted"}), 200
 
 
+@app.route("/get_nearby_pois", methods=["POST"])
+def get_nearby_pois():
+    """
+    Endpoint to get nearby POIs and send a notification to the user.
+    ---
+    tags:
+      - POI
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          properties:
+            latitude:
+              type: number
+              example: 42.123456
+            longitude:
+              type: number
+              example: -71.123456
+            distance:
+              type: number
+              example: 0.3
+            language_id:
+              type: string
+              example: "6d68e409-c46e-4d4a-8560-f15256e9cbb3"
+            user_id_token:
+              type: string
+              example: "433352562"
+            route_id:
+              type: string
+              example: "route_12345"
+    responses:
+      200:
+        description: Nearby POIs retrieved and notification sent successfully
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+            data:
+              type: array
+              items:
+                type: object
+      400:
+        description: Invalid input data
+      404:
+        description: User not found or has no FCM token
+    """
+    body = request.get_json()
+    latitude = body.get('latitude', None)
+    longitude = body.get('longitude', None)
+    distance_km = float(body.get('distance', 0.3))
+    language_id = body.get('language_id', '6d68e409-c46e-4d4a-8560-f15256e9cbb3')
+    user_id_token = body.get('user_id_token', None)
+    route_id = body.get('route_id', None)
+    
 
+    print("Getting nearby POIs for user:", user_id_token, latitude, longitude, distance_km, language_id, route_id)
+    #actualizo la ubicacion del usuario 
+    if not user_id_token:
+        return jsonify({"status": "error", "message": "Missing user_id_token parameter"}), 400
+    user = dto.get_user_by_id(user_id_token)
+    if not user:
+        return jsonify({"status": "error", "message": "User not found"}), 404
+    token = user.get("fcm_token", None)
+    if not token:
+        return jsonify({"status": "error", "message": "User has no FCM token"}), 404
+    pois = dto.get_nearby_pois(latitude, longitude, distance_km, language_id, route_id)
+    print("Nearby POIs:", pois)
 
+    # Actualizar siempre la ubicación del usuario
+    dto.update_user(None, user_id_token, latitude, longitude, None, None)
 
+    # Si no hay POIs cercanos, retornar sin enviar notificación
+    if len(pois) == 0:
+        return jsonify({"status": "ok", "data": pois}), 200
 
+    # Generar el mensaje de notificación
+    nearby_poi = pois[0]
+    notification_body = f"{nearby_poi}"
+    current_message = f"{notification_body}"
 
+    # Compruebo si ya he enviado la misma notificación en los últimos 30 minutos
+    last_notification_time = user.get("last_active", None)
+    last_notification_message = user.get("last_notification", None)
+    
+    if last_notification_time and last_notification_message:
+        last_time_struct = time.strptime(last_notification_time, '%Y-%m-%dT%H:%M:%SZ')
+        current_time_struct = time.gmtime()
+        difference_minutes = (time.mktime(current_time_struct) - time.mktime(last_time_struct)) / 60.0
+        
+        # Si el mensaje es el mismo y pasaron menos de 30 minutos, no enviar
+        if last_notification_message == current_message and difference_minutes < 30.0:
+            print("Not sending notification, same message sent", difference_minutes, "minutes ago")
+            return jsonify({"status": "ok", "data": pois}), 200
 
+    #Elimino titles y descriptions para que el mensaje no sea muy largo
+    if "titles" in nearby_poi:
+        del nearby_poi["titles"]
+    if "descriptions" in nearby_poi:
+        del nearby_poi["descriptions"]
+    # Enviar notificación
+    mensaje = messaging.Message(
+        # notification=messaging.Notification(
+        #     title="Nearby POIs",
+        #     body=f"{nearby_poi}",
+        # ),
+        token=token,
+        data={"title": "Nearby POIs",
+            "body": f"{nearby_poi}"}
+    )
+    respuesta = messaging.send(mensaje)
+    print("Mensaje enviado:", respuesta)
+    
+    # Actualizar el timestamp y el mensaje de la última notificación enviada
+    current_timestamp = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
+    user["last_notification"] = current_message
+    dto.update_user(None, user_id_token, latitude, longitude, None, current_timestamp,user["last_notification"])
+    
+    return jsonify({"status": "ok", "data": pois}), 200
 
+@app.route('/events/create', methods=['POST'])
+def function_create_event():
+    """
+    Endpoint to create a new event.
+    ---
+    tags:
+      - Events
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          properties:
+            duration:
+              type: string
+              example: "2h"
+            name:
+              type: string
+              example: "Festival de Música"
+            description:
+              type: string
+              example: "Festival de música tradicional gallega"
+            date:
+              type: string
+              example: "2026-05-15"
+            image:
+              type: string
+              description: Imagen del evento (base64 o URL)
+            routes_ids:
+              type: array
+              items:
+                type: string
+              example: ["route-id-1", "route-id-2"]
+    responses:
+      200:
+        description: Evento creado exitosamente
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+            data:
+              type: string
+      400:
+        description: Datos de entrada inválidos
+    """
+    body = request.get_json()
+    duration = body.get('duration', None)
+    name = body.get('name', None)
+    description = body.get('description', None)
+    date = body.get('date', None)
+    image = body.get('image', None)
+    routes_ids = body.get('routes_ids', [])
 
+    if not name or not description or not date:
+        return jsonify({"status": "error", "message": "Missing required fields"}), 400
 
+    result = dto.create_event(duration, name, description, date, image, routes_ids)
+    return jsonify({"status": "ok", "data": result}), 200
 
+@app.route('/events', methods=['GET'])
+def function_get_events():
+    """
+    Endpoint to get all events.
+    ---
+    tags:
+      - Events
+    responses:
+      200:
+        description: Lista de eventos
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+            data:
+              type: array
+              items:
+                type: object
+      404:
+        description: No se encontraron eventos
+    """
+    events = dto.get_events()
+    
+    if not events:
+        return jsonify({"status": "error", "message": "No events found"}), 404
+    
+    return jsonify({"status": "ok", "data": events}), 200
 
+@app.route('/events/<event_id>', methods=['GET'])
+def function_get_event_by_id(event_id):
+    """
+    Endpoint to get a specific event by ID.
+    ---
+    tags:
+      - Events
+    parameters:
+      - in: path
+        name: event_id
+        type: string
+        required: true
+        description: ID del evento
+    responses:
+      200:
+        description: Evento encontrado
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+            data:
+              type: object
+      404:
+        description: Evento no encontrado
+    """
+    event = dto.get_event_by_id(event_id)
+    
+    if not event:
+        return jsonify({"status": "error", "message": "Event not found"}), 404
+    
+    return jsonify({"status": "ok", "data": event}), 200
 
-
-
-
-
-
-
-
-
+@app.route('/events/delete/<event_id>', methods=['DELETE'])
+def function_delete_event(event_id):
+    """
+    Endpoint to delete a specific event by ID.
+    ---
+    tags:
+      - Events
+    parameters:
+      - in: path
+        name: event_id
+        type: string
+        required: true
+        description: ID del evento a eliminar
+    responses:
+      200:
+        description: Evento eliminado exitosamente
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+            data:
+              type: object
+      404:
+        description: Evento no encontrado
+    """
+    result = dto.delete_event(event_id)
+    
+    if not result:
+        return jsonify({"status": "error", "message": "Event not found or could not be deleted"}), 404
+    
+    return jsonify({"status": "ok", "data": result}), 200
 
 if __name__ == '__main__':
   # # generate swagger documentation

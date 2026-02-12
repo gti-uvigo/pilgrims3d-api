@@ -78,6 +78,25 @@ def get_route_locations(route_id: str):
             del location[key]
     return route_locations
 
+def get_routes_by_owner(owner_email: str, language_id: str = "6d68e409-c46e-4d4a-8560-f15256e9cbb3"):
+    """
+    Obtiene todas las rutas creadas por un usuario específico.
+    
+    :param owner_email: Email del propietario de las rutas a obtener.
+    :return: Lista de rutas creadas por el usuario.
+    """
+    if not owner_email:
+        raise ValueError("El email del propietario no puede ser vacío.")
+    
+    routes = get_method("routes", {"owner_id": owner_email}, many=True)
+    for route in routes:
+        route["title"] = get_text_by_lang(route.get("titles", []), language_id)
+        route["short_description"] = get_text_by_lang(route.get("short_descriptions", []), language_id)
+        route["long_description"] = get_text_by_lang(route.get("long_descriptions", []), language_id)
+        for key in ["titles", "short_descriptions", "long_descriptions", "_id", "stages", "locations"]:
+            if key in route:
+                del route[key]
+    return routes
 
 
 def get_poi_by_id(poi_id: str, language_id: str = "6d68e409-c46e-4d4a-8560-f15256e9cbb3"):
@@ -329,7 +348,7 @@ def register_user(fcm_token: str, id_token: str, email: str, latitude: str = Non
     result = post_method("users", user_data)
     return result
 
-def update_user(fcm_token: str, id_token: str, latitude: str, longitude: str, email: str = None, timestamp: str = None):
+def update_user(fcm_token: str, id_token: str, latitude: str, longitude: str, email: str = None, timestamp: str = None,last_notification: str = None):
     """
     Actualiza la información de un usuario.
     
@@ -347,6 +366,10 @@ def update_user(fcm_token: str, id_token: str, latitude: str, longitude: str, em
         update_data["last_active"] = timestamp
     if fcm_token is not None:
         update_data["fcm_token"] = fcm_token
+    if email is not None:
+        update_data["email"] = email
+    if last_notification is not None:
+        update_data["last_notification"] = last_notification
 
 
     result = update_method("users", {"id_token": id_token}, {"$set": update_data})
@@ -376,7 +399,7 @@ def get_pois_by_user_email(user_email: str, language_id: str = "6d68e409-c46e-4d
     :return: Lista de POIs creados por el usuario.
     """
 
-    super_admin_emails = ["3dbigdataspace@gti.uvigo.es"]
+    super_admin_emails = ["3dbigdataspace@gti.uvigo.es","jbeiro@gti.uvigo.es","apajon@gti.uvigo.es"]
 
     if not user_email:
         raise ValueError("El email del usuario no puede ser vacío.")
@@ -416,6 +439,12 @@ def calcular_distancia_km(lat1, lon1, lat2, lon2):
     from math import radians, sin, cos, sqrt, atan2
 
     R = 6371.0  # Radio de la Tierra en kilómetros
+    
+    # Convertir a float para asegurar que sean números
+    lat1 = float(lat1)
+    lon1 = float(lon1)
+    lat2 = float(lat2)
+    lon2 = float(lon2)
     
     lat1_rad = radians(lat1)
     lon1_rad = radians(lon1)
@@ -514,7 +543,7 @@ def get_pois_in_a_region(north, south, east, west, language_id: str = "6d68e409-
 
 
 
-def create_route(language_id, long_description, name, short_description, route_type, stages, locations, owner, subtype, total_distance, image_id=None, image_body=None):
+def create_route(language_id, long_description, name, short_description, route_type, stages, locations, owner, subtype, total_distance, image_id=None, image_body=None,visibility="public"):
     """
     Crea una nueva ruta en la base de datos.
     
@@ -536,7 +565,7 @@ def create_route(language_id, long_description, name, short_description, route_t
         "owner_id": owner,
         "type": subtype,
         "image_id": image_id,
-        "visibility": "public",
+        "visibility": visibility,
         "distance": total_distance,
         "stages": stages,
         "locations": locations,
@@ -629,3 +658,94 @@ def get_user_rating_for_poi(user_id: str, poi_id: str):
     else:
         rating = None 
     return rating
+
+
+
+####Nearby POIs####
+def get_nearby_pois(latitude: float, longitude: float, distance_km: float, language_id: str = "6d68e409-c46e-4d4a-8560-f15256e9cbb3", route_id: str = None):
+    """
+    Obtiene todos los puntos de interés (POIs) cercanos a una ubicación específica dentro de una distancia dada.
+
+    :param latitude: Latitud de la ubicación central.
+    :param longitude: Longitud de la ubicación central.
+    :param distance_km: Distancia en kilómetros para buscar POIs cercanos.
+    :param language_id: ID del idioma para obtener los textos localizados.
+    :route_id: ID de la ruta para utilizar solo los Pois de la ruta
+    :return: Lista de POIs cercanos a la ubicación especificada.
+    """
+    latitude = float(latitude)
+    longitude = float(longitude)
+    distance_km = float(distance_km)
+    nearby_pois = []
+    if route_id is not None:
+        route = get_method("routes", {"route_id": route_id}, many=False)
+        if not route or "locations" not in route or "all_points" not in route["locations"]:
+            return []
+        route_points = route["locations"]["all_points"]
+        pois_in_route = set()
+        if "pois" in route:
+            pois_in_route.update(route["pois"])
+        if "stages" in route:
+            for stage in route["stages"]:
+                if "points_of_interest" in stage:
+                    for poi in stage["points_of_interest"]:
+                        if "id" in poi:
+                            pois_in_route.add(poi["id"])
+        pois = get_method("pois", {"id": {"$in": list(pois_in_route)}}, many=True)
+    else:
+        return []
+        
+    for poi in pois:
+        try:
+            del poi["_id"]
+            poi["title"] = get_text_by_lang(poi.get("titles", []), language_id)
+            poi["description"] = get_text_by_lang(poi.get("descriptions", []), language_id)
+            poi_lat = float(poi['latitude'])
+            poi_lon = float(poi['longitude'])
+            distance = calcular_distancia_km(poi_lat, poi_lon, latitude, longitude)
+            if distance <= distance_km:
+                nearby_pois.append(poi)
+        except (KeyError, ValueError):
+            continue
+
+    return nearby_pois
+
+
+
+##Events##
+
+def create_event(duration, name: str, description: str, date: str, image=None, routes_ids = []):
+    event_data = {
+        "id": str(uuid.uuid4()),
+        "name": name,
+        "description": description,
+        "date": date,
+        "routes_ids": routes_ids
+    }
+    if image is not None:
+        image_id = str(uuid.uuid4())
+        upload_image_gridfs(image, image_id=image_id, metadatos={"contentType": "image/jpeg"})
+        event_data["image_id"] = image_id
+
+    result = post_method("events", event_data)
+    return result
+
+def get_events():
+    events = get_method("events", {}, many=True)
+    for event in events:
+        for key in ["_id"]:
+            if key in event:
+                del event[key]
+    return events
+
+def delete_event(event_id: str):
+    result = delete_method("events", {"id": event_id})
+    return result 
+
+def get_event_by_id(event_id: str):
+    event = get_method("events", {"id": event_id})
+    if event:
+        for key in ["_id"]:
+            if key in event:
+                del event[key]
+    return event
