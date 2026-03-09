@@ -1,7 +1,10 @@
 from db.dao import delete_method, get_method, post_method, get_image_gridfs, update_method, upload_image_gridfs
+from db.mongo_client import db_connection
+from flask import Response
 import uuid
 import time
 from bson import ObjectId
+from gridfs import GridFS
 
 
 def get_text_by_lang(text_list, lang_id):
@@ -658,6 +661,117 @@ def get_user_rating_for_poi(user_id: str, poi_id: str):
     else:
         rating = None 
     return rating
+
+
+
+
+def get_audios_by_metadata(filter_metadata):
+    """
+    Obtiene archivos de audio filtrados por metadata específica.
+    
+    Args:
+        filter_metadata (dict): Filtro para la metadata (ej: {"route_id": "123"})
+    
+    Returns:
+        list: Lista de archivos que coinciden con el filtro
+    """
+    try:
+        # Obtener la instancia de la base de datos
+        db = db_connection.get_db()
+        
+        # Construir el filtro para buscar en metadata
+        query = {}
+        for key, value in filter_metadata.items():
+            query[f"metadata.{key}"] = value
+        
+        # Filtrar también por extensiones de audio
+        audio_extensions = ['.mp3', '.wav', '.ogg', '.m4a', '.flac', '.aac', '.wma']
+        # Construir patrón regex fuera del f-string para evitar errores de sintaxis
+        escaped_extensions = [ext.replace('.', r'\.') + '$' for ext in audio_extensions]
+        regex_pattern = '|'.join(escaped_extensions)
+        query["filename"] = {
+            "$regex": regex_pattern,
+            "$options": "i"
+        }
+        
+        files = db.fs.files.find(query)
+        
+        results = []
+        print(f"🔍 Buscando audios con metadata: {filter_metadata}")
+        print("─" * 60)
+        
+        for file_info in files:
+            # Convertir ObjectId a string para serialización JSON
+            file_info['_id'] = str(file_info['_id'])
+            results.append(file_info)
+            print(f"\n  ID: {file_info['_id']}")
+            print(f"  Nombre: {file_info['filename']}")
+            print(f"  Tamaño: {file_info['length']} bytes")
+            print(f"  Metadata: {file_info.get('metadata', {})}")
+        
+        print(f"\n📊 Total encontrados: {len(results)}")
+        return results
+            
+    except Exception as e:
+        print(f"❌ Error al buscar audios: {e}")
+        raise
+
+def get_audio_by_id(audio_id):
+    """
+    Obtiene un archivo de audio por su ID.
+    
+    :param audio_id: ID del archivo a buscar (guardado en metadata.audio_id).
+    :return: Archivo encontrado o None si no se encuentra.
+    """
+    try:
+        # Obtener la instancia de la base de datos
+        db = db_connection.get_db()
+        fs = GridFS(db)
+        
+        # Buscar el archivo en GridFS por metadata.audio_id
+        file_data = fs.find_one({"metadata.audio_id": audio_id})
+        
+        if file_data:
+            print(f"✅ Audio encontrado: {file_data.filename} (ID: {file_data._id})")
+            
+            # Determinar el content_type basado en la extensión del archivo
+            content_type = file_data.content_type if hasattr(file_data, 'content_type') and file_data.content_type else None
+            
+            # Si no hay content_type, inferirlo de la extensión
+            if not content_type:
+                filename = file_data.filename.lower()
+                if filename.endswith('.mp3'):
+                    content_type = 'audio/mpeg'
+                elif filename.endswith('.wav'):
+                    content_type = 'audio/wav'
+                elif filename.endswith('.ogg'):
+                    content_type = 'audio/ogg'
+                elif filename.endswith('.m4a'):
+                    content_type = 'audio/mp4'
+                elif filename.endswith('.flac'):
+                    content_type = 'audio/flac'
+                elif filename.endswith('.aac'):
+                    content_type = 'audio/aac'
+                else:
+                    content_type = 'audio/mpeg'  # Por defecto
+            
+            # Leer el contenido del archivo
+            audio_content = file_data.read()
+            
+            response = Response(audio_content, mimetype=content_type)
+            response.headers['Content-Length'] = str(file_data.length)
+            response.headers['Accept-Ranges'] = 'bytes'
+            return response
+        else:
+            print(f"⚠️ No se encontró audio con audio_id: {audio_id}")
+            return None
+            
+    except Exception as e:
+        print(f"❌ Error al obtener el audio por ID: {e}")
+        raise
+
+
+
 
 
 
