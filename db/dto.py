@@ -5,6 +5,7 @@ import uuid
 import time
 from bson import ObjectId
 from gridfs import GridFS
+from utils import delete_user_from_firebase
 
 
 def get_text_by_lang(text_list, lang_id):
@@ -12,6 +13,14 @@ def get_text_by_lang(text_list, lang_id):
     for item in text_list:
         if item.get("language_id") == lang_id:
             return item.get("text")
+    return None
+
+
+def get_audio_id_by_lang(audio_list, lang_id):
+    """Busca en una lista de diccionarios el que coincide con el lang_id y devuelve su audio_id."""
+    for item in audio_list:
+        if item.get("language_id") == lang_id:
+            return item.get("audio_id")
     return None
 
 
@@ -29,7 +38,8 @@ def get_routes_descriptions_by_type(route_type: str, type: str = "featured", lan
         route["title"] = get_text_by_lang(route.get("titles", []), language_id)
         route["short_description"] = get_text_by_lang(route.get("short_descriptions", []), language_id)
         route["long_description"] = get_text_by_lang(route.get("long_descriptions", []), language_id)
-        for key in ["titles", "short_descriptions", "long_descriptions", "_id", "stages", "locations"]:
+        route["audio_id"] = get_audio_id_by_lang(route.get("audios", []), language_id)
+        for key in ["titles", "short_descriptions", "long_descriptions", "_id", "stages", "locations","audios"]:
             if key in route:
                 del route[key]
     return routes
@@ -1019,3 +1029,20 @@ def get_route_reviews(route_id: str):
     result.sort(key=lambda x: x.get("created_at") or "", reverse=True)
     return result
     
+
+
+
+def delete_account(email: str):
+    """
+    Elimina un usuario y todos sus datos asociados (POIs, rutas, reseñas, valoraciones, etc.) de la base de datos.
+
+    :param user_id: ID del usuario a eliminar.
+    :return: Diccionario con el resultado de la eliminación.
+    """
+
+    # Finalmente, eliminar el usuario
+
+    delete_user_from_firebase(email)
+    delete_method("users", {"email": email})
+
+    return {"status": "success", "message": f"User {email} and all associated data have been deleted."}

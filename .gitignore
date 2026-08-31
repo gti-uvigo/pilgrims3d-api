@@ -183,3 +183,4 @@ credentials_firebase.json
 !.gitignore
 !.git
 scripts/*
+credentials_firebase.json

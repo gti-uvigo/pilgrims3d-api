@@ -52,6 +52,7 @@ swagger_config = {
     }
 }
 
+
 @app.route('/routes', methods=['POST'])
 def function_get_all_routes():
     """
@@ -2005,6 +2006,50 @@ def rate_us():
 
     inserted_id = dto.save_rate_us(body)
     return jsonify({"status": "ok", "data": {"id": inserted_id}}), 200
+
+
+
+@app.route('/delete_account', methods=['POST'])
+def delete_account():
+    """
+    Endpoint to delete a user's account.
+    ---
+    tags:
+      - Accounts
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - email
+          properties:
+            email:
+              type: string
+              example: "user@example.com"
+    responses:
+      200:
+        description: Cuenta eliminada correctamente
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+            data:
+              type: object
+      400:
+        description: Datos de entrada inválidos
+    """
+    body = request.get_json()
+    if not body or not body.get('email'):
+        return jsonify({"status": "error", "message": "Missing required field: email"}), 400
+
+    deleted = dto.delete_account(body['email'], firebase_admin)
+    if not deleted:
+        return jsonify({"status": "error", "message": "Account not found"}), 404
+
+    return jsonify({"status": "ok", "data": {"message": "Account deleted successfully"}}), 200
 
 
 if __name__ == '__main__':

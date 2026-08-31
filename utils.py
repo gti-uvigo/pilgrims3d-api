@@ -1,6 +1,10 @@
 import requests
 import json
 import base64
+import firebase_admin
+from firebase_admin import credentials
+from firebase_admin import auth
+
 
 def haversine_distance(start_points, end_points):
     """
@@ -158,4 +162,20 @@ def base64StringToJpg(base64_string):
     :param base64_string: Cadena Base64 de la imagen.
     """
     return base64.b64decode(base64_string)
+
+
+
+
+def delete_user_from_firebase(email):
+    try:
+        usuario = auth.get_user_by_email(email)
+        print(f"Usuario encontrado: {usuario.uid} - {usuario.email}")
+        uid = usuario.uid
+        auth.delete_user(uid)
+        print(f"El usuario con email '{email}' (UID: {uid}) ha sido eliminado exitosamente.")
+        
+    except auth.UserNotFoundError:
+        print(f"Error: No se encontró ningún usuario con el email '{email}'.")
+    except Exception as e:
+        print(f"Ocurrió un error: {e}")
 
